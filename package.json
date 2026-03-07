@@ -2,11 +2,11 @@
     "name": "pixel-tube",
     "displayName": "Pixel Tube",
     "description": "Your in-editor broadcast player — flip through curated channels while you code.",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "publisher": "lucilehan",
     "repository": {
         "type": "git",
-        "url": "https://github.com/lucilehan/pixel-tv"
+        "url": "https://github.com/lucilehan/pixel-tube.git"
     },
     "engines": {
         "vscode": "^1.75.0"

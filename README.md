@@ -116,6 +116,10 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 ## Changelog
 
+### 1.1.1
+- Fixed extension metadata and repository URLs for VS Code Marketplace stability
+- Synchronized package-lock configurations
+
 ### 1.1.0
 - Renamed to **Pixel Tube** (removed Dev suffix)
 - New channels: Entertainment (Lord of the Rings, Harry Potter, EarthCam), updated Music (Nintendo Radio, K-POP), updated News (LiveNOW FOX, Bloomberg)

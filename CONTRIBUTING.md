@@ -1,4 +1,4 @@
-# Contributing to Pixel TV
+# Contributing to Pixel Tube
 
 Thanks for taking the time to contribute! Here's everything you need to know.
 
@@ -6,7 +6,7 @@ Thanks for taking the time to contribute! Here's everything you need to know.
 
 ## Reporting Issues
 
-Use the [GitHub Issues](https://github.com/lucilehan/pixel-tv/issues) tracker.
+Use the [GitHub Issues](https://github.com/lucilehan/pixel-tube/issues) tracker.
 
 Before opening a new issue, please search existing issues to avoid duplicates. When filing a bug, include:
 
@@ -68,8 +68,8 @@ Open an issue with the `enhancement` label. Describe:
 ## Setting Up the Project
 
 ```bash
-git clone https://github.com/lucilehan/pixel-tv.git
-cd pixel-tv
+git clone https://github.com/lucilehan/pixel-tube.git
+cd pixel-tube
 npm install
 npm run compile
 ```
@@ -86,4 +86,4 @@ vsce package
 
 ## Questions?
 
-Open a [Discussion](https://github.com/lucilehan/pixel-tv/discussions) or ping [@lucilehan](https://github.com/lucilehan) in the issue.
+Open a [Discussion](https://github.com/lucilehan/pixel-tube/discussions) or ping [@lucilehan](https://github.com/lucilehan) in the issue.
