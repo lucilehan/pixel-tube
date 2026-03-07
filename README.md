@@ -2,9 +2,11 @@
 
 > Your in-editor broadcast player — flip through curated channels while you code. Sits in your Explorer sidebar, remembers your last channel, and shows what's on in the status bar.
 
-![Pixel Tube Interface](media/interface.png)
+<img src="media/01-setup.png" width="320" alt="Pixel Tube setup screen">
 
-![Pixel Tube Setup](media/setup.png)
+<img src="media/02-playing.png" width="320" alt="Pixel Tube playing Nintendo Radio">
+
+<img src="media/03-search.png" width="320" alt="Pixel Tube search in action">
 
 ---
 
@@ -55,10 +57,12 @@ Open the Explorer panel and scroll down to **Pixel Tube** — or use the keyboar
 
 | Action | macOS | Windows / Linux |
 |--------|-------|-----------------|
-| Open Pixel Tube | `Cmd+Shift+Y` | `Ctrl+Shift+Y` |
+| Open Pixel Tube | `Cmd+Shift+Y, T` | `Ctrl+Shift+Y, T` |
 | Reset setup (reselect channels) | `Cmd+Shift+Alt+Y` | `Ctrl+Shift+Alt+Y` |
 | Switch channel / Stop | Click status bar item | Click status bar item |
 | Command palette | `Pixel Tube: Open` | `Pixel Tube: Now Playing / Change Room` |
+| Pause / Play | Media Pause/Play key | Media Pause/Play key |
+| Volume up / down | Media Volume keys | Media Volume keys |
 
 On first launch you'll pick which channels to load. After that, just pick a channel and the TV tunes in.
 
@@ -118,9 +122,16 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 ## Changelog
 
+### 1.2.0
+- **New icon**: dark wood exterior matching the in-editor TV, red LED, red antenna tips
+- **Fix**: content no longer bleeds below the screen when the panel is minimized
+
 ### 1.1.3
-- Updated README with fresh screenshots (Setup and Interface)
-- Removed outdated demo GIF
+- **Featured Landing**: Nintendo Radio now appears as a "Featured" banner on first launch
+- **Smooth Browsing**: Toggling channels no longer interrupts your current playback
+- **Sticky Equalizer**: Audio animation now stays on the currently playing video during searches and room switching
+- **New Shortcut**: Call Pixel Tube with `Cmd+Shift+Y, T` (chord) to avoid debug conflicts
+- **Visuals**: Scaled down README screenshots for better legibility and removed old demo GIF
 
 ### 1.1.2
 - Enhanced searchability with new keywords (entertainment, news, stream, video)

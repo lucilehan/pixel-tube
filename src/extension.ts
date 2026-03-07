@@ -100,7 +100,7 @@ function httpsGet(url: string): Promise<string> {
 
 async function searchYouTubeLiveStreams(query: string, apiKey: string): Promise<VideoItem[]> {
   const q = encodeURIComponent(query);
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&eventType=live&maxResults=10&key=${apiKey}`;
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&eventType=live&maxResults=20&key=${apiKey}`;
   const raw = await httpsGet(url);
   const json = JSON.parse(raw);
   if (json.error) { throw new Error(json.error.message || 'YouTube API error'); }
@@ -141,9 +141,9 @@ const ROOMS = [
 // ── Curated 24/7 live streams ─────────────────────────────────────────────────
 const CURATED_LIVE: VideoItem[] = [
   // 🎧 Music
+  { id: "vYcDCcpue_k", title: "Nintendo Radio | 24/7 Music Live Stream", ch: "Nintendo Radio", dur: "LIVE", tags: "nintendo gaming music video game ost 24/7", room: "music" },
   { id: "Dx5qFachd3A", title: "Jazz & Bossa Nova | Coffee Shop Radio", ch: "Cafe Music BGM", dur: "LIVE", tags: "jazz bossa nova coffee relax chill music", room: "music" },
   { id: "jfKfPfyJRdk", title: "lofi hip hop radio | beats to relax/study to", ch: "Lofi Girl", dur: "LIVE", tags: "lofi dark academia chill relax study beats", room: "music" },
-  { id: "vYcDCcpue_k", title: "Nintendo Radio | 24/7 Music Live Stream", ch: "Nintendo Radio", dur: "LIVE", tags: "nintendo gaming music video game ost 24/7", room: "music" },
   { id: "S-TNDpQGTSQ", title: "K-POP 24/7 Live Stream", ch: "K-POP Radio", dur: "LIVE", tags: "kpop k-pop korean pop music 24/7", room: "music" },
 
   // 📰 News
@@ -194,6 +194,10 @@ class PixelTvViewProvider implements vscode.WebviewViewProvider {
     this._context = context;
   }
 
+  public postMessage(msg: object) {
+    this._view?.webview.postMessage(msg);
+  }
+
   public stopPlayback() {
     this._view?.webview.postMessage({ type: 'stop' });
     this._context.globalState.update('pixelTube.lastPlayed', undefined);
@@ -203,10 +207,10 @@ class PixelTvViewProvider implements vscode.WebviewViewProvider {
   public async resetSetup() {
     await this._context.globalState.update('pixelTube.enabledRooms', undefined);
     await this._context.globalState.update('pixelTube.lastPlayed', undefined);
+    await vscode.workspace.getConfiguration('pixelTube').update('youtubeApiKey', undefined, vscode.ConfigurationTarget.Global);
     updateStatusBar(null);
     if (this._view && this._port) {
-      const _hasKey = !!vscode.workspace.getConfiguration('pixelTv').get('youtubeApiKey', '');
-      this._view.webview.html = getWebviewContent(this._port, CURATED_LIVE, ROOMS, undefined, undefined, _hasKey);
+      this._view.webview.html = getWebviewContent(this._port, CURATED_LIVE, ROOMS, undefined, undefined, undefined);
     }
   }
 
@@ -236,18 +240,35 @@ class PixelTvViewProvider implements vscode.WebviewViewProvider {
     const lastPlayed: LastPlayed | undefined = this._context.globalState.get('pixelTube.lastPlayed');
     const enabledRooms = this._context.globalState.get<string[]>('pixelTube.enabledRooms');
 
-    const hasApiKey = !!vscode.workspace.getConfiguration('pixelTv').get('youtubeApiKey', '');
-    webviewView.webview.html = getWebviewContent(this._port, CURATED_LIVE, ROOMS, lastPlayed, enabledRooms, hasApiKey);
+    const apiKey = vscode.workspace.getConfiguration('pixelTube').get<string>('youtubeApiKey', '');
+    webviewView.webview.html = getWebviewContent(this._port, CURATED_LIVE, ROOMS, lastPlayed, enabledRooms, apiKey);
+
+    // Prompt to reload when the API key is saved via settings UI
+    this._context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration(e => {
+        if (!e.affectsConfiguration('pixelTube.youtubeApiKey')) { return; }
+        vscode.window.showInformationMessage(
+          'Pixel Tube: API key saved. Reload to apply search.',
+          'Reload'
+        ).then(choice => {
+          if (choice !== 'Reload') { return; }
+          const newKey = vscode.workspace.getConfiguration('pixelTube').get<string>('youtubeApiKey', '');
+          const last: LastPlayed | undefined = this._context.globalState.get('pixelTube.lastPlayed');
+          const rooms = this._context.globalState.get<string[]>('pixelTube.enabledRooms');
+          webviewView.webview.html = getWebviewContent(this._port!, CURATED_LIVE, ROOMS, last, rooms, newKey);
+        });
+      })
+    );
 
     webviewView.webview.onDidReceiveMessage(async (msg: any) => {
 
       if (msg.type === 'saveSettings') {
         await this._context.globalState.update('pixelTube.enabledRooms', msg.enabledRooms);
         if (msg.apiKey) {
-          await vscode.workspace.getConfiguration('pixelTv').update('youtubeApiKey', msg.apiKey, vscode.ConfigurationTarget.Global);
+          await vscode.workspace.getConfiguration('pixelTube').update('youtubeApiKey', msg.apiKey, vscode.ConfigurationTarget.Global);
         }
         const last: LastPlayed | undefined = this._context.globalState.get('pixelTube.lastPlayed');
-        const savedKey = !!vscode.workspace.getConfiguration('pixelTv').get('youtubeApiKey', '');
+        const savedKey = vscode.workspace.getConfiguration('pixelTube').get<string>('youtubeApiKey', '');
         webviewView.webview.html = getWebviewContent(this._port!, CURATED_LIVE, ROOMS, last, msg.enabledRooms, savedKey);
       }
 
@@ -270,7 +291,7 @@ class PixelTvViewProvider implements vscode.WebviewViewProvider {
       }
 
       if (msg.type === 'search') {
-        const apiKey: string = vscode.workspace.getConfiguration('pixelTv').get('youtubeApiKey', '');
+        const apiKey: string = vscode.workspace.getConfiguration('pixelTube').get('youtubeApiKey', '');
         const safeQuery = String(msg.query).slice(0, 200);
 
         if (!apiKey) {
@@ -293,6 +314,10 @@ class PixelTvViewProvider implements vscode.WebviewViewProvider {
 
       if (msg.type === 'openApiKeySettings') {
         vscode.commands.executeCommand('workbench.action.openSettings', 'pixelTube.youtubeApiKey');
+      }
+
+      if (msg.type === 'resetSetup') {
+        vscode.commands.executeCommand('pixelTube.resetSetup');
       }
 
       // Webview reports its natural pixel height — reveal the view so VS Code
@@ -329,18 +354,26 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pixelTube.openSetup', () => {
+      vscode.commands.executeCommand('pixelTube.view.focus');
+      provider.postMessage({ type: 'showSetup' });
+    })
+  );
+
   // Status bar click → quick pick: change room or stop
   context.subscriptions.push(
     vscode.commands.registerCommand('pixelTube.statusBarMenu', async () => {
       const last: LastPlayed | undefined = context.globalState.get('pixelTube.lastPlayed');
       const options = last
-        ? ['🎚 Change Room', '⏹ Stop', '📺 Open Pixel Tube']
-        : ['📺 Open Pixel Tube'];
+        ? ['🎚 Change Room', '⏹ Stop', '📺 Open Pixel Tube', '⚙ Settings']
+        : ['📺 Open Pixel Tube', '⚙ Settings'];
       const pick = await vscode.window.showQuickPick(options, { placeHolder: 'Pixel Tube' });
       if (!pick) { return; }
       if (pick === '🎚 Change Room') { provider.showChannelPicker(); }
       if (pick === '⏹ Stop') { provider.stopPlayback(); }
       if (pick === '📺 Open Pixel Tube') { vscode.commands.executeCommand('pixelTube.view.focus'); }
+      if (pick === '⚙ Settings') { vscode.commands.executeCommand('pixelTube.resetSetup'); }
     })
   );
 }
@@ -352,12 +385,7 @@ export function deactivate() {
 
 // ── Webview HTML ──────────────────────────────────────────────────────────────
 function getNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return require('crypto').randomBytes(16).toString('hex');
 }
 
 function getWebviewContent(
@@ -366,21 +394,21 @@ function getWebviewContent(
   rooms: typeof ROOMS,
   lastPlayed?: LastPlayed,
   enabledRooms?: string[],
-  hasApiKey?: boolean
+  apiKey?: string
 ): string {
   const nonce = getNonce();
   const videosJson = JSON.stringify(videos);
   const roomsJson = JSON.stringify(rooms);
   const lastJson = JSON.stringify(lastPlayed || null);
   const enabledJson = JSON.stringify(enabledRooms || null);
-  const searchPlaceholder = hasApiKey ? 'search streams...' : 'add API key in setup to enable search';
+  const searchPlaceholder = apiKey ? 'Tune into...' : 'Add API key for live search';
 
   return /* html */`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src http://127.0.0.1:${port} http://localhost:${port}; img-src https://i.ytimg.com https: data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-${nonce}';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src http://127.0.0.1:${port} http://localhost:${port}; img-src https://i.ytimg.com data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-${nonce}';">
 <title>Pixel Tube</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
@@ -401,14 +429,19 @@ function getWebviewContent(
     --bez-4:     #0d0e0f;
     --bez-hi:    #383a3d;
     
-    --screen-bg: #030405;
-    --col-red:    #a83636;
-    --col-amber:  #dfaa46;
-    --col-purple: #7a4e99;
-    --glow-amber: 0 0 10px #dfaa4688, 0 0 20px #dfaa4633;
-    --text-bright:#e0e0e0;
-    --text-dim:   #60606b;
-    --scanline:   rgba(0,0,0,0.3);
+    --col-amber: #ffb000;
+    --col-amber-dim: #ffb00066;
+    --col-green: #6dbf7e;
+    --col-green-dim: #4a5a48;
+    --col-purple: #8b5cf6;
+    --col-red: #ef4444;
+    --text-bright: #f0f0f0;
+    --text-dim: #808080;
+    --glow-amber: 0 0 8px rgba(255,176,0,0.35);
+    --glow-purple: 0 0 10px rgba(139,92,246,0.3);
+    --trans-mech: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    --trans-fluid: 0.22s cubic-bezier(0.23, 1, 0.32, 1);
+    --scanline:   rgba(0,0,0,0.07);
   }
 
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -416,40 +449,46 @@ function getWebviewContent(
   html, body { width:100%; height:100%; margin:0; padding:0; background:#100c08; overflow:hidden; font-family:monospace; }
   body { padding:0 !important; }
 
-  .tv-wrap { display:flex; flex-direction:column; width:100%; height:100%; background-color:var(--wood-1); background-image:repeating-linear-gradient(90deg, transparent 0px, transparent 18px, rgba(0,0,0,0.1) 18px, rgba(0,0,0,0.1) 19px, transparent 19px, transparent 32px, rgba(255,255,255,0.02) 32px, rgba(255,255,255,0.02) 33px); border:3px solid var(--wood-edge); box-shadow:inset 2px 2px 0 var(--wood-3), inset -2px -2px 0 var(--wood-5); padding:8px; overflow:hidden; }
+  .tv-wrap { display:flex; flex-direction:column; width:100%; height:100%; background-color:var(--wood-1); background-image:repeating-linear-gradient(90deg, transparent 0px, transparent 18px, rgba(0,0,0,0.1) 18px, rgba(0,0,0,0.1) 19px, transparent 19px, transparent 32px, rgba(255,255,255,0.02) 32px, rgba(255,255,255,0.02) 33px); border:3px solid var(--wood-edge); box-shadow:inset 2px 2px 0 var(--wood-3), inset -2px -2px 0 var(--wood-5); overflow:hidden; min-width:140px; }
+  .tv-main-content { padding:8px 8px 0 8px; display:flex; flex-direction:column; flex-shrink:0; transition: opacity var(--trans-fluid), transform var(--trans-fluid); }
+  .tv-main-content.hidden { opacity:0; transform: translateY(4px); pointer-events:none; position:absolute; }
 
-  .tv-nameplate { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; padding:0 2px; flex-shrink:0; }
-  .tv-brand { font-family:'Press Start 2P',monospace; font-size:5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; }
-  .tv-screws { display:flex; gap:4px; }
+  .tv-nameplate { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; padding:0 2px; flex-shrink:0; position:relative; }
+  .tv-brand { font-family:'Press Start 2P',monospace; font-size:7.5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; }
+.tv-screws { display:flex; gap:4px; }
   .screw { width:7px; height:7px; background:var(--wood-4); border:1px solid var(--wood-edge); position:relative; }
   .screw::before { content:''; position:absolute; top:50%; left:1px; right:1px; height:1px; background:var(--wood-edge); transform:translateY(-50%); }
   .screw::after  { content:''; position:absolute; left:50%; top:1px; bottom:1px; width:1px; background:var(--wood-edge); transform:translateX(-50%); }
 
-  .screen-bezel { background:var(--bez-2); border:3px solid var(--bez-4); padding:7px; box-shadow:inset 3px 3px 0 var(--bez-hi), inset -3px -3px 0 var(--bez-4); margin-bottom:0; flex-shrink:0; }
-  .screen { background:var(--screen-bg); border:2px solid var(--bez-4); position:relative; overflow:hidden; width:100%; height:148px; flex-shrink:0; }
+  .screen-bezel { background:var(--bez-2); border:3px solid var(--bez-4); padding:8px; box-shadow:inset 3px 3px 0 var(--bez-hi), inset -3px -3px 0 var(--bez-4), 1px 1px 0 rgba(255,255,255,0.05); margin-bottom:8px; flex-shrink:0; position:relative; }
+  .gray-bezel { background:var(--bez-2); border:3px solid var(--bez-4); padding:8px; box-shadow:inset 2px 2px 0 var(--bez-hi), inset -2px -2px 0 var(--bez-4), 0.5px 0.5px 0 rgba(255,255,255,0.05); margin-bottom:8px; flex-shrink:0; }
+  .screen { background:var(--screen-bg); border:2px solid var(--bez-4); position:relative; overflow:hidden; width:100%; height:148px; flex-shrink:0; box-shadow: inset 0 4px 12px rgba(0,0,0,0.5); }
 
-  .screen-resize-handle { height:7px; background:var(--wood-2); cursor:ns-resize; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-top:1px solid var(--wood-3); border-bottom:1px solid var(--wood-4); margin-bottom:6px; }
+  .screen-resize-handle { height:8px; background:var(--wood-2); cursor:ns-resize; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-top:1px solid var(--wood-edge); border-bottom:1px solid var(--wood-edge); margin-bottom:0; }
   .screen-resize-handle:hover, .screen-resize-handle.dragging { background:var(--wood-3); }
   .resize-grip { width:20px; height:2px; background:repeating-linear-gradient(90deg, var(--wood-5) 0px, var(--wood-5) 2px, transparent 2px, transparent 4px); }
-  .screen::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:20; background:repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, var(--scanline) 2px, var(--scanline) 4px); }
+
+  .tv-ridge { height:8px; background:var(--bez-4); border-top:1px solid #1a1c1e; border-bottom:1px solid #000; flex-shrink:0; position:relative; overflow:hidden; box-shadow: inset 0 1px 1px rgba(0,0,0,0.5); }
+  .tv-ridge::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0, transparent 6px, rgba(0,0,0,0.2) 6px, rgba(0,0,0,0.2) 7px); opacity:0.6; }
+  .screen::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:20; background:repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, var(--scanline) 3px, var(--scanline) 4px); }
   .screen::before { content:''; position:absolute; top:0; left:0; width:45%; height:35%; background:radial-gradient(ellipse at 15% 15%, rgba(255,240,180,0.04) 0%, transparent 65%); pointer-events:none; z-index:30; }
 
-  .static-bg { position:absolute; inset:0; opacity:0.1; pointer-events:none; animation:staticAnim 0.1s steps(1) infinite; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); }
+  .static-bg { position:absolute; inset:0; opacity:0.02; pointer-events:none; animation:staticAnim 0.1s steps(1) infinite; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); }
   @keyframes staticAnim { 0%{background-position:0 0} 25%{background-position:-12px 6px} 50%{background-position:6px -6px} 75%{background-position:-6px 12px} }
 
   .idle-screen { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
-  .idle-label { font-family:'VT323',monospace; font-size:14px; color:var(--col-amber); opacity:0.4; text-shadow:var(--glow-amber); animation:flicker 6s ease-in-out infinite; }
+  .idle-label { font-family:'VT323',monospace; font-size:16px; color:var(--col-amber); opacity:0.4; text-shadow:var(--glow-amber); animation:flicker 6s ease-in-out infinite; }
   @keyframes flicker { 0%,93%,100%{opacity:0.4} 94%{opacity:0.1} 95%{opacity:0.4} 97%{opacity:0.08} 98%{opacity:0.35} }
-  .idle-sub { font-size:4px; color:#2a2a40; font-family:'Press Start 2P',monospace; margin-top:4px; }
+  .idle-sub { font-size:6px; color:#2a2a40; font-family:'Press Start 2P',monospace; margin-top:6px; }
 
   /* Resume banner shown on reload when last session is remembered */
-  .resume-banner { position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:rgba(5,8,10,0.88); }
+  .resume-banner { position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:rgba(5,8,10,0.92); }
   .resume-banner.hidden { display:none; }
-  .resume-label { font-family:'VT323',monospace; font-size:12px; color:var(--col-amber); opacity:0.7; letter-spacing:2px; }
-  .resume-title { font-family:'VT323',monospace; font-size:13px; color:var(--text-bright); text-align:center; padding:0 8px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .resume-btn { font-family:'Press Start 2P',monospace; font-size:5px; padding:5px 10px; background:#0c1410; color:var(--col-amber); border:1px solid var(--col-amber); box-shadow:var(--glow-amber); cursor:pointer; }
-  .resume-btn:hover { background:#141a10; }
-  .resume-dismiss { font-family:'Press Start 2P',monospace; font-size:4px; color:var(--text-dim); cursor:pointer; border:none; background:none; }
+  .resume-label { font-family:'VT323',monospace; font-size:15px; color:var(--col-amber); opacity:0.7; letter-spacing:2px; }
+  .resume-title { font-family:'VT323',monospace; font-size:16px; color:var(--text-bright); text-align:center; padding:0 12px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .resume-btn { font-family:'Press Start 2P',monospace; font-size:7px; padding:8px 16px; background:#0c1410; color:var(--col-purple); border:1px solid var(--col-purple); box-shadow:var(--glow-purple); cursor:pointer; margin-top:12px; }
+  .resume-btn:hover { background:#141a10; color: #9c6fc2; border-color: #9c6fc2; }
+  .resume-dismiss { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--text-dim); cursor:pointer; border:none; background:none; margin-top:24px; margin-bottom:10px; }
   .resume-dismiss:hover { color:var(--text-bright); }
 
   #playerFrame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; z-index:5; }
@@ -464,62 +503,65 @@ function getWebviewContent(
 
   .now-playing-bar { position:absolute; bottom:0; left:0; right:0; padding:4px 8px; background:linear-gradient(transparent, #00000099 70%); z-index:30; display:none; align-items:center; gap:6px; pointer-events:none; overflow:hidden; }
   .now-playing-bar.visible { display:flex; }
-  .np-dot { width:4px; height:4px; background:var(--col-amber); box-shadow:var(--glow-amber); flex-shrink:0; animation:ledPulse 1.4s ease-in-out infinite; }
+  .np-dot { width:4px; height:4px; background:var(--col-purple); box-shadow:var(--glow-purple); flex-shrink:0; animation:ledPulse 1.4s ease-in-out infinite; }
   @keyframes ledPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .np-title { font-size:3px; color:var(--text-bright); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; width:0; }
 
   /* API key banner */
-  .api-banner { display:none; align-items:center; justify-content:space-between; padding:4px 6px; background:#0c0806; border-top:1px solid #3e2208; gap:4px; flex-shrink:0; }
+  .api-banner { display:none; align-items:center; justify-content:space-between; padding:4px 8px; background:var(--wood-4); border-top:1px solid var(--wood-edge); border-bottom:1px solid var(--wood-edge); gap:4px; flex-shrink:0; }
   .api-banner.visible { display:flex; }
-  .api-banner-text { font-family:'Press Start 2P',monospace; font-size:7px; color:#8a5418; flex:1; }
-  .api-banner-btn { font-family:'Press Start 2P',monospace; font-size:7px; padding:3px 5px; background:#100a04; color:var(--col-amber); border:1px solid #5a3408; cursor:pointer; white-space:nowrap; flex-shrink:0; }
-  .api-banner-btn:hover { border-color:var(--col-amber); }
+  .api-banner-text { font-family:'Press Start 2P',monospace; font-size:6px; color:#b06a2a; flex:1; }
+  .api-banner-btn { font-family:'Press Start 2P',monospace; font-size:6px; padding:4px 6px; background:var(--wood-5); color:var(--col-amber); border:1px solid var(--wood-edge); cursor:pointer; white-space:nowrap; flex-shrink:0; }
+  .api-banner-btn:hover { border-color:var(--col-amber); background:var(--wood-4); }
 
-  /* Enhanced Search Bar */
-  .toolbar { display:flex; align-items:center; gap:4px; padding:6px 6px; background:#0a0c0a; border-top:1px solid #141814; border-bottom:1px solid #0d0d08; flex-shrink:0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
-  .search-box { flex:1; display:flex; align-items:center; background:#111511; border:1px solid #20261f; height:24px; padding:0 8px; min-width:0; border-radius:12px; transition:border-color 0.2s; }
-  .search-box:focus-within { border-color:var(--wood-2); }
-  .search-input { background:none; border:none; outline:none; flex:1; font-family:'VT323',monospace; font-size:17px; color:#c8e8c8; caret-color:#6dbf7e; min-width:0; }
-  .search-input::placeholder { color:#4a5a48; font-size:14px; }
+  /* New Bezel-Housed Search */
+  .search-bezel { display:flex; align-items:center; gap:12px; height:36px; transition: var(--trans-mech); border:2px solid var(--bez-4); padding:7px 9px; }
+  .search-bezel:not(.no-api):focus-within { border-color:var(--col-purple); box-shadow:inset 2px 2px 0 var(--bez-hi), inset -2px -2px 0 var(--bez-4), 0 0 6px rgba(139,92,246,0.4); }
+  .set-key-btn { font-family:'Press Start 2P',monospace; font-size:5px; padding:3px 6px; background:var(--wood-5); color:var(--col-amber); border:1px solid var(--wood-edge); cursor:pointer; white-space:nowrap; flex-shrink:0; letter-spacing:1px; }
+  .set-key-btn:hover { border-color:var(--col-amber); background:var(--wood-4); }
+  .search-label-inline { font-family:'Press Start 2P',monospace; font-size:6px; color:#70707b; opacity:0.8; white-space:nowrap; border: 1px solid #2a3828; background: #0c100c; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); text-shadow: 0 1px 0 #000; letter-spacing:1px; line-height:1; flex-shrink:0; }
+  .search-input { background:none; border:none; outline:none; flex:1; font-family:'VT323',monospace; font-size:18px; color:var(--col-green); caret-color:var(--col-green); min-width:0; height:100%; display:flex; align-items:center; }
+  .search-input::placeholder { color:var(--col-green-dim); font-size:15px; }
 
   /* Rooms bar */
-  .rooms-bar { display:flex; flex-direction:column; padding:4px; background:#040605; border-top:1px solid #0e110e; flex-shrink:0; gap:3px; }
-  .room-chip { font-family:'Press Start 2P',monospace; font-size:8px; padding:6px 8px; border:1px solid #1a1a10; background:#080a06; color:#b06a2a; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition: 0.1s; }
-  .room-chip:hover { border-color:#c87a35; color:#c87a35; }
-  .room-chip.active { background:#10080e; border-color:var(--col-purple); color:var(--col-purple); }
-  .room-desc { font-family:'VT323',monospace; font-size:12px; color:var(--text-dim); font-weight:normal; }
-  .room-chip.active .room-desc { color:#7a4e99aa; }
+  .rooms-bar { display:flex; flex-direction:column; padding:0; background:none; flex-shrink:0; gap:4px; }
+  .room-chip { font-family:'VT323',monospace; padding:6px 8px; border:1px solid var(--wood-edge); border-left:4px solid transparent; background:var(--wood-5); color:#b06a2a; cursor:pointer; display:flex; align-items:center; transition: var(--trans-mech); gap:12px; overflow:hidden; }
+  .room-chip:hover { background:var(--wood-4); border-left-color:rgba(139,92,246,0.3); transform: translateX(2px); }
+  .room-chip:hover .room-label { color:#d88a45; }
+  .room-chip.active { background:var(--wood-5); border-left:4px solid var(--col-purple); padding-left:8px; box-shadow: inset 1px 0 0 rgba(255,255,255,0.1), inset 0 0 8px rgba(0,0,0,0.3); position:relative; }
+  .room-chip.active::before { content:''; position:absolute; left:-4px; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.3); z-index:2; }
+  .room-chip.active .room-label { color:var(--col-purple); text-shadow: 0 0 4px rgba(139,92,246,0.2); }
+  .room-label { font-size:16px; color:#b06a2a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; line-height:1; }
+  .room-desc { font-family:'VT323',monospace; font-size:13px; color:#805020; font-weight:normal; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; text-align:right; }
 
-  .search-header { display:flex; align-items:center; justify-content:space-between; padding:4px 6px 3px; background:#050705; border-top:1px solid #181e16; flex-shrink:0; }
-  .search-header-label { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--text-dim); letter-spacing:1px; }
-  .search-header-hint { font-family:'VT323',monospace; font-size:11px; color:#3a4a38; }
+  .on-air-badge { position:absolute; top:8px; right:8px; display:inline-flex; align-items:center; justify-content:space-between; min-width:72px; gap:8px; border:1px solid #2a3828; padding:2px 10px; background:#0c100c; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); z-index:10; pointer-events:none; }
+  .results-label { font-size:6px; color:#70707b; opacity:0.8; letter-spacing:1px; font-family:'Press Start 2P',monospace; text-shadow: 0 1px 0 #000; }
+  .results-count { font-family:'VT323',monospace; font-size:14px; color:#70707b; line-height:1; }
 
-  .results-header { display:flex; align-items:center; justify-content:flex-end; padding:4px 6px; background:#060806; border-top:1px solid #0e110e; flex-shrink:0; }
-  .on-air-badge { display:inline-flex; align-items:center; gap:5px; border:1px solid #2a3828; padding:2px 6px; background:#070a06; }
-  .results-label { font-size:6px; color:var(--col-amber); letter-spacing:1px; font-family:'Press Start 2P',monospace; }
-  .results-count { font-family:'VT323',monospace; font-size:14px; color:var(--col-amber); opacity:0.8; line-height:1; }
-
-  .results-list { background:#030506; flex:1; min-height:0; overflow-y:auto; }
+  .results-list { background:none; flex:1; min-height:132px; overflow-y:auto; padding:24px 0 0; display:flex; flex-direction:column; gap:4px; }
   .results-list::-webkit-scrollbar { width:3px; }
   .results-list::-webkit-scrollbar-track { background:#030506; }
   .results-list::-webkit-scrollbar-thumb { background:#2a2a1a; }
-  .results-list::-webkit-scrollbar-thumb:hover { background:var(--col-amber); }
-
-  .result-item { display:flex; align-items:center; gap:6px; padding:0 6px; height:44px; border-bottom:1px solid #0c0e0a; cursor:pointer; transition:background 0.1s; flex-shrink:0; }
-  .result-item:hover { background:#0a0d08; }
-  .result-item.selected { background:#0c1008; border-left:2px solid var(--col-amber); padding-left:4px; }
-  .result-thumb { width:44px; height:28px; flex-shrink:0; overflow:hidden; border:1px solid #1a1a12; background:#080808; }
+  .results-list::-webkit-scrollbar-thumb:hover { background:var(--col-purple); }
+  
+  .result-item { display:flex; align-items:center; gap:10px; padding:4px 8px; height:40px; background:var(--wood-5); border:1px solid var(--wood-edge); border-left:4px solid transparent; cursor:pointer; transition: var(--trans-mech); flex-shrink:0; }
+  .result-item:hover { background:var(--wood-4); border-left-color: rgba(139,92,246,0.3); transform: translateX(2px); }
+  .result-item.selected { background:var(--wood-5); border-color:var(--wood-edge); border-left:4px solid var(--col-purple); padding-left:8px; box-shadow: inset 1px 0 0 rgba(255,255,255,0.1), inset 8px 0 16px -8px rgba(139,92,246,0.2); position:relative; }
+  .result-item.selected::before { content:''; position:absolute; left:-4px; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.3); z-index:2; }
+  .result-thumb { width:40px; height:24px; flex-shrink:0; overflow:hidden; border:1px solid #1a1a12; background:#080808; }
   .result-thumb img { width:100%; height:100%; object-fit:cover; filter:saturate(0.3) brightness(0.75); display:block; }
   .result-item:hover .result-thumb img, .result-item.selected .result-thumb img { filter:saturate(0.55) brightness(0.85); }
-  .result-meta { flex:1; min-width:0; width:0; overflow:hidden; }
-  .result-title { font-family:'VT323',monospace; font-size:14px; color:var(--text-bright); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; opacity:0.8; }
-  .result-item.selected .result-title { color:#fff; opacity:1; }
-  .result-ch { font-size:4px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; font-family:'Press Start 2P',monospace; }
+  .result-meta { flex:1; min-width:0; width:0; overflow:hidden; display:flex; flex-direction:column; justify-content:center; }
+  .result-title { font-family:'VT323',monospace; font-size:14px; color:#b06a2a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; opacity:0.9; line-height:1.1; }
+  .result-item.selected .result-title { color:var(--col-purple); opacity:1; text-shadow: 0 0 8px rgba(139,92,246,0.3); }
+  .result-item:hover .result-title { color:#d88a45; opacity:1; }
+  .result-ch { font-size:11px; color:#805020; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; font-family:'VT323',monospace; margin-top:0; }
   .error-msg { font-family:'VT323',monospace; font-size:11px; color:#8a3030; padding:6px 8px; background:#0a0404; text-align:center; }
   
   .equalizer { display:none; gap:2px; height:8px; align-items:flex-end; margin-left:auto; }
+  .result-item.selected { display:flex; }
   .result-item.selected .equalizer { display:flex; }
-  .eq-bar { width:3px; background:var(--col-red); animation:eq 0.7s infinite alternate ease-in-out; }
+  .eq-bar { width:3px; background:var(--col-purple); animation:eq 0.7s infinite alternate ease-in-out; box-shadow: 0 0 4px rgba(139,92,246,0.3); }
   .eq-bar:nth-child(2) { animation-delay:-0.2s; }
   .eq-bar:nth-child(3) { animation-delay:-0.4s; }
   @keyframes eq { 0%{height:2px} 100%{height:9px} }
@@ -528,107 +570,143 @@ function getWebviewContent(
   @keyframes crtFlash { 0%{opacity:1;} 100%{opacity:0;} }
   .crt-flash.flash { animation:crtFlash 0.3s ease-out; }
 
-  .setup-layer { position:absolute; inset:0; z-index:100; background:#050705; display:flex; flex-direction:column; padding:16px 14px; gap:10px; display:none; }
+  .setup-layer { flex:1; display:none; flex-direction:column; padding:0 8px 8px 8px; gap:8px; overflow:hidden; justify-content:space-between; transition: opacity var(--trans-fluid), transform var(--trans-fluid); }
   .setup-layer.visible { display:flex; }
-  .setup-title { font-family:'Press Start 2P', monospace; font-size:9px; color:var(--col-amber); text-align:center; line-height:1.6; letter-spacing:2px; text-shadow:var(--glow-amber); }
-  .setup-subtitle { font-family:'VT323', monospace; font-size:15px; color:var(--text-dim); text-align:center; letter-spacing:1px; }
-  .setup-channels { display:flex; flex-direction:column; gap:6px; margin:4px 0; overflow-y:auto; }
-  .setup-checkbox-lbl { display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:10px 8px; background:#0c100a; border:1px solid #1e2418; transition:0.15s; }
-  .setup-checkbox-lbl:hover { border-color:var(--col-amber); background:#121810; }
-  .setup-checkbox-lbl input { accent-color:var(--col-amber); transform:scale(1.3); margin-top:4px; flex-shrink:0; }
-  .setup-ch-info { display:flex; flex-direction:column; gap:2px; }
-  .setup-ch-name { font-family:'VT323', monospace; font-size:18px; color:var(--text-bright); line-height:1.1; }
-  .setup-ch-desc { font-family:'VT323', monospace; font-size:13px; color:var(--text-dim); }
-  .setup-api-section { margin-top:4px; padding:10px 8px; background:#0a0d08; border:1px solid #1a2018; }
-  .setup-api-label { font-family:'Press Start 2P', monospace; font-size:6px; color:var(--text-dim); letter-spacing:1px; margin-bottom:6px; display:block; }
-  .setup-api-row { display:flex; gap:6px; align-items:center; }
-  .setup-api-input { flex:1; background:#070a06; border:1px solid #252e22; color:#c8e8c8; font-family:'VT323',monospace; font-size:15px; padding:5px 8px; outline:none; min-width:0; }
-  .setup-api-input::placeholder { color:#3a4a38; }
+  .setup-layer.hidden { display:none; opacity:0; transform: translateY(4px); }
+  .setup-title-wrap { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:16px; padding-top:8px; }
+  .setup-title { font-family:'Press Start 2P',monospace; font-size:7.5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; display:inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); }
+  .setup-subtitle { font-family:'Press Start 2P',monospace; font-size:7.5px; color:#b06a2a; opacity:0.6; text-shadow: 0 1px 0 #000; letter-spacing:1px; margin-top:24px; margin-bottom:10px; display:block; padding:0 8px; }
+  .setup-channels { display:flex; flex-direction:column; gap:4px; padding:0; overflow-y:auto; flex:1; }
+  .setup-checkbox-lbl { display:flex; align-items:center; gap:12px; cursor:pointer; padding:6px 8px; background:var(--wood-5); border:1px solid var(--wood-edge); transition: var(--trans-mech); margin-left:0; }
+  .setup-checkbox-lbl:hover { border-color:var(--col-purple); background:var(--wood-4); transform: translateX(2px); }
+  .setup-checkbox-lbl.active { background:var(--wood-5); border-color:var(--wood-edge); }
+  .setup-checkbox-lbl input { accent-color:#b06a2a; transform:scale(1.1); margin-top:0; flex-shrink:0; }
+  .setup-ch-info { display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:16px; flex:1; min-width:0; }
+  .setup-ch-name { font-family:'VT323', monospace; font-size:16px; color:#b06a2a; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+  .setup-ch-desc { font-family:'VT323', monospace; font-size:13px; color:#805020; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; flex:1; }
+  .setup-api-section { margin-top:0; padding:4px 0; position:relative; }
+  .setup-api-label { font-family:'VT323', monospace; font-size:14px; color:var(--col-amber); opacity:0.8; margin-bottom:8px; display:block; text-transform:uppercase; letter-spacing:1px; padding:0 8px; }
+  .setup-api-row { display:flex; gap:8px; align-items:center; padding:0 8px 8px; }
+  .setup-api-input { flex:1; background:var(--wood-edge); border:1px solid var(--wood-4); color:#c8e8c8; font-family:'VT323',monospace; font-size:15px; padding:7px 34px 7px 8px; outline:none; min-width:0; }
+  .setup-api-input::placeholder { color:#4a3219; }
   .setup-api-input:focus { border-color:var(--col-amber); }
-  .setup-api-hint { font-family:'VT323', monospace; font-size:12px; color:var(--text-dim); margin-top:4px; }
-  .setup-api-hint a { color:#5a7a55; }
-  .setup-save-btn { font-family:'Press Start 2P',monospace; font-size:8px; padding:12px; background:#0c1008; color:var(--col-amber); border:2px solid var(--col-amber); box-shadow:var(--glow-amber); cursor:pointer; text-align:center; margin-top:auto; letter-spacing:1px; }
-  .setup-save-btn:hover { background:#181e10; }
+  .apiKeyToggle { background:none; border:none; color:#706060; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:5px; padding:0 10px; height:100%; position:absolute; right:0; top:0; transition: var(--trans-mech); letter-spacing:1px; }
+  .apiKeyToggle:hover { color:#a09090; }
+  .setup-api-hint { font-family:'VT323', monospace; font-size:14px; color:#a0a0b0; }
+  .setup-api-hint a { color:#6ea068; text-decoration:none; border-bottom:1px solid #5a7a55; }
+  .setup-api-hint a:hover { color:#8fcb84; border-color:#8fcb84; }
+  .agent-guide { margin-top:8px; padding-top:12px; border-top:1px dashed var(--wood-edge); font-family:'VT323', monospace; font-size:14px; color:var(--text-dim); position:relative; }
+  .agent-guide-header { display:flex; justify-content:space-between; align-items:center; padding:0 8px; margin-bottom:6px; }
+  .agent-guide-label { display:block; font-family:'VT323',monospace; font-size:14px; color:var(--text-dim); }
+  .prompt-wrapper { padding:0 8px; }
+  .prompt-text { padding:10px 14px; background:var(--wood-edge); border:1px solid var(--wood-4); color:var(--col-green-dim); font-family:'VT323',monospace; font-size:15px; line-height:1.4; white-space:pre-wrap; overflow-x:hidden; overflow-y:auto; height:auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); word-break:break-word; }
+  .prompt-text::-webkit-scrollbar { width:3px; }
+  .prompt-text::-webkit-scrollbar-thumb { background:var(--wood-4); }
+  .copy-btn { background:var(--wood-4); border:1px solid var(--wood-edge); color:var(--col-green); padding:4px 8px; border-radius:3px; cursor:pointer; font-size:8px; font-family:'Press Start 2P',monospace; transition: var(--trans-mech); text-shadow: 0 1px 0 #000; }
+  .copy-btn:hover { color:var(--text-bright); border-color:var(--col-green); background:var(--wood-3); }
+  .setup-save-btn { font-family:'Press Start 2P',monospace; font-size:7px; padding:14px; background:#0c1410; color:var(--col-purple); border:1px solid var(--col-purple); box-shadow:var(--glow-purple); cursor:pointer; text-align:center; margin-top:0; letter-spacing:2px; width:100%; flex-shrink:0; position:sticky; bottom:0; z-index:10; transition: var(--trans-mech); }
+  .setup-save-btn:hover { background:#141a10; color: #9c6fc2; border-color: #9c6fc2; }
 </style>
 </head>
 <body>
 
-<div class="setup-layer" id="setupLayer">
-  <div class="setup-title">📺 PIXEL TUBE</div>
-  <div class="setup-subtitle">SELECT CHANNELS TO ADD TO YOUR TV</div>
-  <div class="setup-channels" id="setupRooms"></div>
-  <div class="setup-api-section">
-    <span class="setup-api-label">YOUTUBE API KEY (OPTIONAL)</span>
-    <div class="setup-api-row">
-      <input class="setup-api-input" id="setupApiInput" type="password" placeholder="paste key here..." autocomplete="off" spellcheck="false"/>
-    </div>
-    <div class="setup-api-hint">Enables full YouTube search · <a href="https://console.cloud.google.com" target="_blank">get a key →</a></div>
-  </div>
-  <button class="setup-save-btn" id="setupSaveBtn">TUNE IN ▶</button>
-</div>
-
 <div class="tv-wrap" id="tvWrap">
-
-  <div class="tv-nameplate">
-    <div class="tv-screws"><div class="screw"></div><div class="screw"></div></div>
-    <div class="tv-brand">PIXEL TUBE</div>
-    <div class="tv-screws"><div class="screw"></div><div class="screw"></div></div>
-  </div>
-
-  <div class="screen-bezel">
-    <div class="screen">
-      <div class="static-bg"></div>
-      <div class="idle-screen" id="idleScreen">
-        <div class="idle-label">NO SIGNAL</div>
-        <div class="idle-sub">PICK A ROOM</div>
-      </div>
-      <!-- Resume banner: shown on reload if last session exists -->
-      <div class="resume-banner hidden" id="resumeBanner">
-        <div class="resume-label">⟳ LAST WATCHED</div>
-        <div class="resume-title" id="resumeTitle"></div>
-        <button class="resume-btn" id="resumeBtn">▶ RESUME</button>
-        <button class="resume-dismiss" id="resumeDismiss">dismiss</button>
-      </div>
-      <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-bar"><div class="loading-bar-fill" id="loadingFill"></div></div>
-        <div class="loading-text" id="loadingText">TUNING▮</div>
-      </div>
-      <iframe id="playerFrame" src="" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-      <div class="crt-flash" id="crtFlash"></div>
-      <div class="now-playing-bar" id="nowPlayingBar">
-        <div class="np-dot"></div>
-        <span class="np-title" id="npTitle"></span>
-      </div>
-    </div>
-  </div>
-  <div class="screen-resize-handle" id="screenResizeHandle"><span class="resize-grip"></span></div>
-
-  <div class="api-banner" id="apiBanner">
-    <span class="api-banner-text">Add API key for live search</span>
-    <div class="api-banner-btn" id="apiKeyBtn">SET KEY ▶</div>
-  </div>
-
-  <!-- Rooms replace genre chips -->
-  <div class="rooms-bar" id="roomsBar"></div>
-
-  <div class="search-header">
-    <span class="search-header-label">SEARCH</span>
-    ${!hasApiKey ? '<span class="search-header-hint">Add API key in Setup to search YouTube</span>' : ''}
-  </div>
-
-  <div class="toolbar">
-    <div class="search-box">
-      <input class="search-input" id="searchInput" type="text" placeholder="${searchPlaceholder}" autocomplete="off" spellcheck="false"/>
+  <div class="tv-static-header" style="padding:8px 8px 0 8px; flex-shrink:0;">
+    <div class="tv-nameplate">
+      <div class="tv-screws"><div class="screw"></div><div class="screw"></div></div>
+      <div class="tv-brand">PIXEL TUBE</div>
+<div class="tv-screws"><div class="screw"></div><div class="screw"></div></div>
     </div>
   </div>
 
-  <div class="results-header">
-    <div class="on-air-badge">
-      <span class="results-label">ON AIR</span>
-      <span class="results-count" id="resultsCount">0</span>
+  <div id="tvMainView" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+    <div class="tv-main-content" style="padding:0 8px 0 8px;">
+      <div class="screen-bezel">
+        <div class="screen">
+          <div class="static-bg"></div>
+          <div class="idle-screen" id="idleScreen">
+            <div class="idle-label">NO SIGNAL</div>
+            <div class="idle-sub">PICK A ROOM</div>
+          </div>
+          <div class="resume-banner hidden" id="resumeBanner">
+            <div class="resume-label">⟳ LAST WATCHED</div>
+            <div class="resume-title" id="resumeTitle"></div>
+            <button class="resume-btn" id="resumeBtn">▶ RESUME</button>
+            <button class="resume-dismiss" id="resumeDismiss">dismiss</button>
+          </div>
+          <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-bar"><div class="loading-bar-fill" id="loadingFill"></div></div>
+            <div class="loading-text" id="loadingText">TUNING▮</div>
+          </div>
+          <iframe id="playerFrame" src="" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+          <div class="crt-flash" id="crtFlash"></div>
+          <div class="now-playing-bar" id="nowPlayingBar">
+            <div class="np-dot"></div>
+            <span class="np-title" id="npTitle"></span>
+          </div>
+        </div>
+      </div>
+      <div class="screen-resize-handle" id="screenResizeHandle"><span class="resize-grip"></span></div>
+    </div>
+
+    <div class="tv-ridge"></div>
+
+    <div id="roomsSection" style="padding:0 8px 8px 8px; flex-shrink:0; background:var(--wood-2);">
+      <div class="gray-bezel" style="margin-bottom:0;">
+        <div class="rooms-bar" id="roomsBar"></div>
+      </div>
+    </div>
+    <div id="searchSection" style="padding:0 8px 8px 8px; flex-shrink:0; background:var(--wood-2);">
+      <div class="gray-bezel search-bezel${!apiKey ? ' no-api' : ''}">
+        <span class="search-label-inline">SEARCH</span>
+        <input class="search-input" id="searchInput" type="text" placeholder="${searchPlaceholder}" autocomplete="off" spellcheck="false"/>
+        ${!apiKey ? '<button class="set-key-btn" id="apiKeyBtn">SET KEY ▶</button>' : ''}
+      </div>
+    </div>
+
+    <div id="resultsSection" style="padding:0 8px 8px 8px; flex:1; display:flex; flex-direction:column; overflow:hidden;">
+      <div class="gray-bezel" style="flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative;">
+        <div class="on-air-badge">
+          <span class="results-label">ON AIR</span>
+          <span class="results-count" id="resultsCount">0</span>
+        </div>
+        <div class="results-list" id="resultsList" style="background:none;"></div>
+      </div>
     </div>
   </div>
-  <div class="results-list" id="resultsList"></div>
+
+  <div class="setup-layer" id="setupLayer">
+    <div class="setup-main-scroller" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto;">
+      <div class="setup-subtitle">SELECT CURATED CHANNELS</div>
+      <div class="gray-bezel" style="display:flex; flex-direction:column;">
+        <div class="setup-channels" id="setupRooms"></div>
+      </div>
+      <div class="setup-subtitle">SEARCH BEYOND CURATED CHANNELS</div>
+      <div class="gray-bezel">
+        <div class="setup-api-section">
+          <span class="setup-api-label">🔑 YOUTUBE API KEY (OPTIONAL)</span>
+          <div class="setup-api-row">
+            <div style="position:relative; flex:1; display:flex;">
+              <input class="setup-api-input" id="setupApiInput" type="password" value="${apiKey || ''}" placeholder="paste key here..." autocomplete="off" spellcheck="false"/>
+              <button class="apiKeyToggle" id="apiKeyToggle" title="Show/Hide">SHOW</button>
+            </div>
+          </div>
+          <div class="setup-api-hint">
+            <div class="agent-guide">
+              <div class="agent-guide-header">
+                <span class="agent-guide-label">Not sure how? Ask the closest agent:</span>
+                <button class="copy-btn" id="copyPromptBtn">COPY</button>
+              </div>
+              <div class="prompt-wrapper">
+                <div class="prompt-text" id="promptText">"I need a YouTube Data API v3 key for my extension (https://github.com/lucilehan/pixel-tube.git). Walk me through creating one on Google Cloud Console step-by-step, including enabling the API, creating an API key, and restricting the key to only use the YouTube Data API for security."</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="setup-save-btn" id="setupSaveBtn">TUNE IN ▶</div>
+  </div>
 
 </div>
 
@@ -681,7 +759,9 @@ function getWebviewContent(
   const activeRooms = isFirstRun ? allRooms : allRooms.filter(r => enabledRooms.includes(r.id));
 
   let activeRoomId = null;
+  let currentPlayingId = lastPlayed ? lastPlayed.videoId : null;
   let _loadingTimer = null;
+  let _searchDebounce = null;
 
   function showLoading(text) {
     clearTimeout(_loadingTimer);
@@ -703,34 +783,77 @@ function getWebviewContent(
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
-  // ── First Run Setup ──
-  if (isFirstRun) {
-    document.getElementById('tvWrap').style.display = 'none';
-    const setupLayer = document.getElementById('setupLayer');
-    setupLayer.classList.add('visible');
-    
+  // ── View Switching ──
+  const setupLayer = document.getElementById('setupLayer');
+  const tvMainView = document.getElementById('tvMainView');
+
+  function showSetupMode(show) {
+    if (show) {
+      if (tvMainView) tvMainView.classList.add('hidden');
+      if (setupLayer) {
+        setupLayer.classList.remove('hidden');
+        setTimeout(() => {
+          if (tvMainView) tvMainView.style.display = 'none';
+          setupLayer.style.display = 'flex';
+          setupLayer.classList.add('visible');
+        }, 30);
+      }
+    } else {
+      if (setupLayer) {
+        setupLayer.classList.remove('visible');
+        setupLayer.classList.add('hidden');
+      }
+      setTimeout(() => {
+        if (setupLayer) setupLayer.style.display = 'none';
+        if (tvMainView) {
+          tvMainView.style.display = 'flex';
+          tvMainView.classList.remove('hidden');
+        }
+      }, 30);
+    }
+  }
+
+  // ── Setup panel (always populated so gear icon works after first run) ──
+  {
     const cbContainer = document.getElementById('setupRooms');
     allRooms.forEach(r => {
       const lbl = document.createElement('label');
-      lbl.className = 'setup-checkbox-lbl';
-      lbl.innerHTML = \`<input type="checkbox" value="\${r.id}" checked><div class="setup-ch-info"><span class="setup-ch-name">\${r.label}</span><span class="setup-ch-desc">\${r.desc}</span></div>\`;
+      const isChecked = enabledRooms ? enabledRooms.includes(r.id) : true;
+      lbl.className = 'setup-checkbox-lbl' + (isChecked ? ' active' : '');
+      lbl.innerHTML = \`<input type="checkbox" value="\${r.id}"\${isChecked ? ' checked' : ''}><div class="setup-ch-info"><span class="setup-ch-name">\${r.label}</span><span class="setup-ch-desc">\${r.desc}</span></div>\`;
+      const cb = lbl.querySelector('input');
+      cb.addEventListener('change', () => lbl.classList.toggle('active', cb.checked));
       cbContainer.appendChild(lbl);
     });
-    
+
     document.getElementById('setupSaveBtn').addEventListener('click', () => {
       const checked = Array.from(cbContainer.querySelectorAll('input:checked')).map(i => i.value);
       const apiKey = document.getElementById('setupApiInput').value.trim();
       vscode.postMessage({ type: 'saveSettings', enabledRooms: checked, apiKey });
     });
+
+    const apiKeyInput = document.getElementById('setupApiInput');
+    const apiKeyToggle = document.getElementById('apiKeyToggle');
+    if (apiKeyToggle && apiKeyInput) {
+      apiKeyToggle.addEventListener('click', () => {
+        const isPassword = apiKeyInput.getAttribute('type') === 'password';
+        apiKeyInput.setAttribute('type', isPassword ? 'text' : 'password');
+        apiKeyToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+      });
+    }
   }
 
-  // ── Build rooms bar ──
-  if (!isFirstRun) {
-    activeRooms.forEach(room => {
-      const chip = document.createElement('div');
-      chip.className = 'room-chip';
-      chip.dataset.roomId = room.id;
-      chip.innerHTML = \`<span>\${room.label}</span><span class="room-desc">\${room.desc}</span>\`;
+  if (isFirstRun) {
+    showSetupMode(true);
+  }
+
+// ── Build rooms bar ──
+if (!isFirstRun) {
+  activeRooms.forEach(room => {
+    const chip = document.createElement('div');
+    chip.className = 'room-chip';
+    chip.dataset.roomId = room.id;
+    chip.innerHTML = \`<span class="room-label">\${room.label}</span><span class="room-desc">\${room.desc}</span>\`;
       chip.addEventListener('click', () => selectRoom(room.id));
       roomsBar.appendChild(chip);
     });
@@ -742,26 +865,21 @@ function getWebviewContent(
     const videos = allVideos.filter(v => v.room === roomId);
     renderResults(videos, false);
     searchInput.value = '';
-    
-    // Auto-play first video in room
-    if (videos.length > 0) {
-      const firstItem = resultsList.querySelector('.result-item');
-      if (firstItem) playVideo(firstItem, videos[0]);
-    }
   }
 
   // ── Render results ──
   function renderResults(videos, showBanner) {
     resultsList.innerHTML = '';
     resultsCount.textContent = videos.length;
-    apiBanner.classList.toggle('visible', !!showBanner);
-    const shown = videos.slice(0, activeRoomId ? videos.length : 3);
+    apiBanner?.classList.toggle('visible', !!showBanner);
+    const shown = videos.slice(0, 20);
     shown.forEach(r => {
       const item = document.createElement('div');
       item.className = 'result-item';
+      if (r.id === currentPlayingId) item.classList.add('selected');
       item.innerHTML = \`
         <div class="result-thumb">
-          <img src="https://i.ytimg.com/vi/\${r.id}/mqdefault.jpg" onerror="this.style.display='none'"/>
+          <img src="https://i.ytimg.com/vi/\${escHtml(r.id)}/mqdefault.jpg" onerror="this.style.display='none'"/>
         </div>
         <div class="result-meta">
           <div class="result-title">\${escHtml(r.title)}</div>
@@ -775,6 +893,7 @@ function getWebviewContent(
   }
 
   function playVideo(item, r) {
+    currentPlayingId = r.id;
     document.querySelectorAll('.result-item').forEach(el => el.classList.remove('selected'));
     item.classList.add('selected');
     
@@ -793,28 +912,38 @@ function getWebviewContent(
     npTitle.textContent = r.title;
   }
 
-  // ── Resume banner ──
-  if (lastPlayed) {
-    idleScreen.style.display = 'none';
-    resumeTitle.textContent  = lastPlayed.title;
-    resumeBanner.classList.remove('hidden');
-
-    document.getElementById('resumeBtn').addEventListener('click', () => {
-      const video = allVideos.find(v => v.id === lastPlayed.videoId);
-      resumeBanner.classList.add('hidden');
-      if (video) {
-        // Find and highlight its list item if visible, else just play
-        const fakeItem = document.createElement('div');
-        playVideo(fakeItem, video);
-      }
-    });
-
-    document.getElementById('resumeDismiss').addEventListener('click', () => {
-      resumeBanner.classList.add('hidden');
-      idleScreen.style.display = '';
-      vscode.postMessage({ type: 'stopped' });
-    });
+  // ── Landing / Resume banner ──
+  const landingVideoId = 'vYcDCcpue_k';
+  let targetVideoId = lastPlayed ? lastPlayed.videoId : (!isFirstRun ? landingVideoId : null);
+  
+  if (targetVideoId && !isFirstRun) {
+    const video = allVideos.find(v => v.id === targetVideoId);
+    if (video) {
+      idleScreen.style.display = 'none';
+      resumeTitle.textContent  = video.title;
+      resumeBanner.classList.remove('hidden');
+      const labelEl = document.querySelector('.resume-label');
+      if (labelEl) labelEl.textContent = lastPlayed ? '⟳ LAST WATCHED' : '⭐ FEATURED';
+      const btn = document.getElementById('resumeBtn');
+      if (btn) btn.textContent = lastPlayed ? '▶ RESUME' : '▶ TUNE IN';
+    }
   }
+
+  document.getElementById('resumeBtn').addEventListener('click', () => {
+    const video = allVideos.find(v => v.id === targetVideoId);
+    if (video) {
+      resumeBanner.classList.add('hidden');
+      const fakeItem = document.createElement('div');
+      playVideo(fakeItem, video);
+    }
+  });
+
+  document.getElementById('resumeDismiss').addEventListener('click', () => {
+    resumeBanner.classList.add('hidden');
+    idleScreen.style.display = '';
+    vscode.postMessage({ type: 'stopped' });
+    targetVideoId = null; // Prevent re-triggering if no longer desired
+  });
 
   function doSearch(q) {
     q = q.trim();
@@ -843,6 +972,7 @@ function getWebviewContent(
     }
 
     if (msg.type === 'stop') {
+      currentPlayingId = null;
       playerFrame.src = '';
       playerFrame.style.display = 'none';
       nowPlayingBar.classList.remove('visible');
@@ -868,14 +998,40 @@ function getWebviewContent(
       resultsList.innerHTML = '';
       resultsList.appendChild(errDiv);
     }
+
+    if (msg.type === 'showSetup') {
+      showSetupMode(true);
+    }
   });
 
-  document.getElementById('apiKeyBtn').addEventListener('click', () => vscode.postMessage({ type: 'openApiKeySettings' }));
-  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(searchInput.value); });
-  searchInput.addEventListener('input', () => doSearch(searchInput.value));
+  document.getElementById('apiKeyBtn')?.addEventListener('click', () => vscode.postMessage({ type: 'openApiKeySettings' }));
+  document.getElementById('settingsShortcut')?.addEventListener('click', () => vscode.postMessage({ type: 'resetSetup' }));
+  const copyBtn = document.getElementById('copyPromptBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = document.getElementById('promptText').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.textContent = 'DONE';
+        setTimeout(() => copyBtn.textContent = 'COPY', 2000);
+      });
+    });
+  }
+  searchInput.addEventListener('keydown', e => { 
+    if (e.key === 'Enter') {
+      clearTimeout(_searchDebounce);
+      doSearch(searchInput.value);
+    }
+  });
+  searchInput.addEventListener('input', () => {
+    clearTimeout(_searchDebounce);
+    _searchDebounce = setTimeout(() => doSearch(searchInput.value), 600);
+  });
+  searchInput.addEventListener('focus', () => {
+    activeRoomId = null;
+    document.querySelectorAll('.room-chip').forEach(c => c.classList.remove('active'));
+  });
 
-  // ── Init: show default 3 or restore last room ──
-  if (!isFirstRun && !lastPlayed) {
+  if (!isFirstRun) {
     renderResults([], false);
   }
 
