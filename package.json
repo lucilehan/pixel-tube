@@ -1,8 +1,8 @@
 {
     "name": "pixel-tube",
     "displayName": "Pixel Tube",
-    "description": "Your in-editor broadcast player — flip through curated channels while you code.",
-    "version": "1.2.4",
+    "description": "Your in-editor video player — flip through curated channels while you code.",
+    "version": "1.2.5",
     "publisher": "lucilehan",
     "repository": {
         "type": "git",
@@ -100,7 +100,6 @@
     "keywords": [
         "lofi",
         "music",
-        "broadcast",
         "channels",
         "focus",
         "study",

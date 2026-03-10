@@ -1,6 +1,6 @@
 # 📺 Pixel Tube
 
-> Your in-editor broadcast player — flip through curated channels while you code. Sits in your Explorer sidebar, remembers your last channel, and shows what's on in the status bar.
+> Your in-editor video player — flip through curated channels while you code. Sits in your Explorer sidebar, remembers your last channel, and shows what's on in the status bar.
 
 
 <img src="media/overview.png" width="800" alt="Pixel Tube Overview: Setup and Playing">
@@ -10,9 +10,9 @@
 
 ## What it does
 
-Pixel Tube lives permanently in your Explorer sidebar. Pick a **Channel**, click a broadcast, and it keeps playing while you code.
+Pixel Tube lives permanently in your Explorer sidebar. Pick a **Channel**, click a video, and it keeps playing while you code.
 
-- **Channels** — four curated environments (Music, News, Entertainment, Touch Grass), each with hand-picked 24/7 broadcasts
+- **Channels** — four curated environments (Music, News, Entertainment, Touch Grass), each with hand-picked 24/7 streams
 - **Channel Memory** — remembers what you were tuned into. Reopen your IDE and a "Last Tuned" banner lets you resume in one click
 - **Status Bar** — shows what's on at all times. Click it to switch channels or stop without touching the sidebar
 - **Search** — filter built-in channels instantly, or connect a YouTube API key to search all of YouTube
@@ -69,7 +69,7 @@ On first launch you'll pick which channels to load. After that, just pick a chan
 
 ## Channels
 
-Four environments, each with curated 24/7 broadcasts:
+Four environments, each with curated 24/7 streams:
 
 | Channel | What's on |
 |---------|-----------|

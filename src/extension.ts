@@ -173,7 +173,7 @@ function createStatusBar(context: vscode.ExtensionContext) {
 function updateStatusBar(last: LastPlayed | null) {
   if (!statusBarItem) { return; }
   if (last) {
-    statusBarItem.text = `$(broadcast) ${last.title.length > 28 ? last.title.slice(0, 28) + '…' : last.title}`;
+    statusBarItem.text = `$(tv) ${last.title.length > 28 ? last.title.slice(0, 28) + '…' : last.title}`;
     statusBarItem.tooltip = `Pixel Tube · ${last.room}\nClick to change channel or stop`;
     statusBarItem.color = new vscode.ThemeColor('statusBarItem.warningForeground');
   } else {
