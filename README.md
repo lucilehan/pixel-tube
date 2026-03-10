@@ -3,7 +3,8 @@
 > Your in-editor broadcast player — flip through curated channels while you code. Sits in your Explorer sidebar, remembers your last channel, and shows what's on in the status bar.
 
 
-<img src="media/02-playing.png" width="320" alt="Pixel Tube playing Nintendo Radio">
+<img src="media/overview.png" width="800" alt="Pixel Tube Overview: Setup and Playing">
+
 
 ---
 
@@ -118,6 +119,10 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 ---
 
 ## Changelog
+
+### 1.2.2
+- **New Branding**: Replaced the extension icon and logo with a custom-designed retro pixel-art television, featuring dark wood grain, V-antennas, and an on-screen menu interface.
+- **Refined Overview**: Updated the README with a side-by-side overview showing both the Setup and Playing screens with pixelated headers.
 
 ### 1.2.1
 - **Icon tweak**: Adjusted brightness, contrast, and saturation of the new dark wood icon for better visibility

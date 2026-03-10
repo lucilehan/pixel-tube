@@ -147,7 +147,7 @@ const CURATED_LIVE: VideoItem[] = [
   { id: "S-TNDpQGTSQ", title: "K-POP 24/7 Live Stream", ch: "K-POP Radio", dur: "LIVE", tags: "kpop k-pop korean pop music 24/7", room: "music" },
 
   // 📰 News
-  { id: "ZvdiJUYGBis", title: "FOX 24/7 Live Stream", ch: "LiveNOW from FOX", dur: "LIVE", tags: "news world breaking live global fox", room: "news" },
+  { id: "iipR5yUp36o", title: "LIVE: ABC News Live - 24/7 news, context and analysis", ch: "ABC News", dur: "LIVE", tags: "news world breaking live global abc", room: "news" },
   { id: "f39oHo6vFLg", title: "Bloomberg Live: Business, Finance & Investment News", ch: "Bloomberg Television", dur: "LIVE", tags: "news tech finance stocks bloomberg business", room: "news" },
 
   // 🌌 Entertainment
@@ -427,6 +427,7 @@ function getWebviewContent(
 
     --bez-2:     #1d1f21;
     --bez-4:     #0d0e0f;
+    --bez-border:#3a3d42;
     --bez-hi:    #383a3d;
     
     --col-amber: #ffb000;
@@ -449,12 +450,12 @@ function getWebviewContent(
   html, body { width:100%; height:100%; margin:0; padding:0; background:#100c08; overflow:hidden; font-family:monospace; }
   body { padding:0 !important; }
 
-  .tv-wrap { display:flex; flex-direction:column; width:100%; height:100%; background-color:var(--wood-1); background-image:repeating-linear-gradient(90deg, transparent 0px, transparent 18px, rgba(0,0,0,0.1) 18px, rgba(0,0,0,0.1) 19px, transparent 19px, transparent 32px, rgba(255,255,255,0.02) 32px, rgba(255,255,255,0.02) 33px); border:3px solid var(--wood-edge); box-shadow:inset 2px 2px 0 var(--wood-3), inset -2px -2px 0 var(--wood-5); overflow:hidden; min-width:140px; }
+  .tv-wrap { display:flex; flex-direction:column; width:100%; height:100%; background-color:var(--wood-1); background-image:repeating-linear-gradient(90deg, transparent 0px, transparent 18px, rgba(0,0,0,0.1) 18px, rgba(0,0,0,0.1) 19px, transparent 19px, transparent 32px, rgba(255,255,255,0.02) 32px, rgba(255,255,255,0.02) 33px); border:3px solid var(--wood-edge); box-shadow:inset 2px 2px 0 var(--wood-3), inset -2px -2px 0 var(--wood-5); overflow:hidden; min-width:200px; }
   .tv-main-content { padding:8px 8px 0 8px; display:flex; flex-direction:column; flex-shrink:0; transition: opacity var(--trans-fluid), transform var(--trans-fluid); }
   .tv-main-content.hidden { opacity:0; transform: translateY(4px); pointer-events:none; position:absolute; }
 
   .tv-nameplate { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; padding:0 2px; flex-shrink:0; position:relative; }
-  .tv-brand { font-family:'Press Start 2P',monospace; font-size:7.5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; }
+  .tv-brand { font-family:'Press Start 2P',monospace; font-size:7.5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; white-space:nowrap; }
 .tv-screws { display:flex; gap:4px; }
   .screw { width:7px; height:7px; background:var(--wood-4); border:1px solid var(--wood-edge); position:relative; }
   .screw::before { content:''; position:absolute; top:50%; left:1px; right:1px; height:1px; background:var(--wood-edge); transform:translateY(-50%); }
@@ -466,7 +467,7 @@ function getWebviewContent(
 
   .screen-resize-handle { height:8px; background:var(--wood-2); cursor:ns-resize; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-top:1px solid var(--wood-edge); border-bottom:1px solid var(--wood-edge); margin-bottom:0; }
   .screen-resize-handle:hover, .screen-resize-handle.dragging { background:var(--wood-3); }
-  .resize-grip { width:20px; height:2px; background:repeating-linear-gradient(90deg, var(--wood-5) 0px, var(--wood-5) 2px, transparent 2px, transparent 4px); }
+  .resize-grip { width:20px; height:2px; background:repeating-linear-gradient(90deg, #666 0px, #666 2px, transparent 2px, transparent 4px); }
 
   .tv-ridge { height:8px; background:var(--bez-4); border-top:1px solid #1a1c1e; border-bottom:1px solid #000; flex-shrink:0; position:relative; overflow:hidden; box-shadow: inset 0 1px 1px rgba(0,0,0,0.5); }
   .tv-ridge::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0, transparent 6px, rgba(0,0,0,0.2) 6px, rgba(0,0,0,0.2) 7px); opacity:0.6; }
@@ -519,7 +520,7 @@ function getWebviewContent(
   .search-bezel:not(.no-api):focus-within { border-color:var(--col-purple); box-shadow:inset 2px 2px 0 var(--bez-hi), inset -2px -2px 0 var(--bez-4), 0 0 6px rgba(139,92,246,0.4); }
   .set-key-btn { font-family:'Press Start 2P',monospace; font-size:5px; padding:3px 6px; background:var(--wood-5); color:var(--col-amber); border:1px solid var(--wood-edge); cursor:pointer; white-space:nowrap; flex-shrink:0; letter-spacing:1px; }
   .set-key-btn:hover { border-color:var(--col-amber); background:var(--wood-4); }
-  .search-label-inline { font-family:'Press Start 2P',monospace; font-size:6px; color:#70707b; opacity:0.8; white-space:nowrap; border: 1px solid #2a3828; background: #0c100c; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); text-shadow: 0 1px 0 #000; letter-spacing:1px; line-height:1; flex-shrink:0; }
+  .search-label-inline { font-family:'Press Start 2P',monospace; font-size:6px; color:#70707b; opacity:0.8; white-space:nowrap; border:1px solid #2a3828; background:#0c100c; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); text-shadow: 0 1px 0 #000; letter-spacing:1px; line-height:1; flex-shrink:0; }
   .search-input { background:none; border:none; outline:none; flex:1; font-family:'VT323',monospace; font-size:18px; color:var(--col-green); caret-color:var(--col-green); min-width:0; height:100%; display:flex; align-items:center; }
   .search-input::placeholder { color:var(--col-green-dim); font-size:15px; }
 
@@ -575,7 +576,7 @@ function getWebviewContent(
   .setup-layer.hidden { display:none; opacity:0; transform: translateY(4px); }
   .setup-title-wrap { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:16px; padding-top:8px; }
   .setup-title { font-family:'Press Start 2P',monospace; font-size:7.5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; display:inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); }
-  .setup-subtitle { font-family:'Press Start 2P',monospace; font-size:7.5px; color:#b06a2a; opacity:0.6; text-shadow: 0 1px 0 #000; letter-spacing:1px; margin-top:24px; margin-bottom:10px; display:block; padding:0 8px; }
+  .setup-subtitle { font-family:'Press Start 2P',monospace; font-size:6px; color:#b06a2a; opacity:0.6; text-shadow: 0 1px 0 #000; letter-spacing:1px; margin-top:24px; margin-bottom:10px; display:block; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .setup-channels { display:flex; flex-direction:column; gap:4px; padding:0; overflow-y:auto; flex:1; }
   .setup-checkbox-lbl { display:flex; align-items:center; gap:12px; cursor:pointer; padding:6px 8px; background:var(--wood-5); border:1px solid var(--wood-edge); transition: var(--trans-mech); margin-left:0; }
   .setup-checkbox-lbl:hover { border-color:var(--col-purple); background:var(--wood-4); transform: translateX(2px); }
@@ -585,21 +586,21 @@ function getWebviewContent(
   .setup-ch-name { font-family:'VT323', monospace; font-size:16px; color:#b06a2a; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
   .setup-ch-desc { font-family:'VT323', monospace; font-size:13px; color:#805020; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; flex:1; }
   .setup-api-section { margin-top:0; padding:4px 0; position:relative; }
-  .setup-api-label { font-family:'VT323', monospace; font-size:14px; color:var(--col-amber); opacity:0.8; margin-bottom:8px; display:block; text-transform:uppercase; letter-spacing:1px; padding:0 8px; }
+  .setup-api-label { font-family:'VT323', monospace; font-size:14px; color:var(--col-amber); opacity:0.8; margin-bottom:8px; display:block; text-transform:uppercase; letter-spacing:1px; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .setup-api-row { display:flex; gap:8px; align-items:center; padding:0 8px 8px; }
-  .setup-api-input { flex:1; background:var(--wood-edge); border:1px solid var(--wood-4); color:#c8e8c8; font-family:'VT323',monospace; font-size:15px; padding:7px 34px 7px 8px; outline:none; min-width:0; }
+  .setup-api-input { flex:1; background:var(--wood-edge); border:1px solid var(--wood-4); color:var(--col-green-dim); font-family:'VT323',monospace; font-size:15px; padding:7px 34px 7px 8px; outline:none; min-width:0; }
   .setup-api-input::placeholder { color:#4a3219; }
   .setup-api-input:focus { border-color:var(--col-amber); }
-  .apiKeyToggle { background:none; border:none; color:#706060; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:5px; padding:0 10px; height:100%; position:absolute; right:0; top:0; transition: var(--trans-mech); letter-spacing:1px; }
+  .apiKeyToggle { background:none; border:none; color:#706060; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:4px; padding:0; height:100%; width:34px; position:absolute; right:0; top:0; transition: var(--trans-mech); letter-spacing:0; overflow:hidden; white-space:nowrap; }
   .apiKeyToggle:hover { color:#a09090; }
   .setup-api-hint { font-family:'VT323', monospace; font-size:14px; color:#a0a0b0; }
   .setup-api-hint a { color:#6ea068; text-decoration:none; border-bottom:1px solid #5a7a55; }
   .setup-api-hint a:hover { color:#8fcb84; border-color:#8fcb84; }
   .agent-guide { margin-top:8px; padding-top:12px; border-top:1px dashed var(--wood-edge); font-family:'VT323', monospace; font-size:14px; color:var(--text-dim); position:relative; }
   .agent-guide-header { display:flex; justify-content:space-between; align-items:center; padding:0 8px; margin-bottom:6px; }
-  .agent-guide-label { display:block; font-family:'VT323',monospace; font-size:14px; color:var(--text-dim); }
+  .agent-guide-label { display:block; font-family:'VT323',monospace; font-size:14px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .prompt-wrapper { padding:0 8px; }
-  .prompt-text { padding:10px 14px; background:var(--wood-edge); border:1px solid var(--wood-4); color:var(--col-green-dim); font-family:'VT323',monospace; font-size:15px; line-height:1.4; white-space:pre-wrap; overflow-x:hidden; overflow-y:auto; height:auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); word-break:break-word; }
+  .prompt-text { padding:10px 14px; background:var(--wood-edge); border:1px solid var(--wood-4); color:var(--col-green-dim); font-family:'VT323',monospace; font-size:15px; line-height:1.4; white-space:pre-wrap; overflow-x:hidden; overflow-y:auto; height:80px; flex-shrink:0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); word-break:break-word; }
   .prompt-text::-webkit-scrollbar { width:3px; }
   .prompt-text::-webkit-scrollbar-thumb { background:var(--wood-4); }
   .copy-btn { background:var(--wood-4); border:1px solid var(--wood-edge); color:var(--col-green); padding:4px 8px; border-radius:3px; cursor:pointer; font-size:8px; font-family:'Press Start 2P',monospace; transition: var(--trans-mech); text-shadow: 0 1px 0 #000; }
@@ -651,12 +652,18 @@ function getWebviewContent(
 
     <div class="tv-ridge"></div>
 
-    <div id="roomsSection" style="padding:0 8px 8px 8px; flex-shrink:0; background:var(--wood-2);">
+    <div id="roomsSection" style="padding:8px 8px 8px 8px; flex-shrink:0;">
       <div class="gray-bezel" style="margin-bottom:0;">
         <div class="rooms-bar" id="roomsBar"></div>
       </div>
     </div>
-    <div id="searchSection" style="padding:0 8px 8px 8px; flex-shrink:0; background:var(--wood-2);">
+    <div id="noChannelSection" style="display:none; padding:8px 8px 8px 8px; flex-shrink:0;">
+      <div class="gray-bezel search-bezel no-api" style="margin-bottom:0;">
+        <span class="search-label-inline">CHANNEL</span>
+        <span style="font-family:'VT323',monospace; font-size:15px; color:var(--col-green-dim); letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">No Channel Selected...</span>
+      </div>
+    </div>
+    <div id="searchSection" style="padding:0 8px 8px 8px; flex-shrink:0;">
       <div class="gray-bezel search-bezel${!apiKey ? ' no-api' : ''}">
         <span class="search-label-inline">SEARCH</span>
         <input class="search-input" id="searchInput" type="text" placeholder="${searchPlaceholder}" autocomplete="off" spellcheck="false"/>
@@ -849,15 +856,20 @@ function getWebviewContent(
 
 // ── Build rooms bar ──
 if (!isFirstRun) {
-  activeRooms.forEach(room => {
-    const chip = document.createElement('div');
-    chip.className = 'room-chip';
-    chip.dataset.roomId = room.id;
-    chip.innerHTML = \`<span class="room-label">\${room.label}</span><span class="room-desc">\${room.desc}</span>\`;
+  if (activeRooms.length === 0) {
+    document.getElementById('roomsSection').style.display = 'none';
+    document.getElementById('noChannelSection').style.display = 'block';
+  } else {
+    activeRooms.forEach(room => {
+      const chip = document.createElement('div');
+      chip.className = 'room-chip';
+      chip.dataset.roomId = room.id;
+      chip.innerHTML = \`<span class="room-label">\${room.label}</span><span class="room-desc">\${room.desc}</span>\`;
       chip.addEventListener('click', () => selectRoom(room.id));
       roomsBar.appendChild(chip);
     });
   }
+}
 
   function selectRoom(roomId) {
     activeRoomId = roomId;
