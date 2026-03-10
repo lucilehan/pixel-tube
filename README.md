@@ -120,6 +120,9 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 ## Changelog
 
+### 1.2.3
+- **Marketplace Compliance**: Standardized branding assets to meet VS Code Marketplace requirements (128x128 square icon).
+
 ### 1.2.2
 - **New Branding**: Replaced the extension icon and logo with a custom-designed retro pixel-art television, featuring dark wood grain, V-antennas, and an on-screen menu interface.
 - **Refined Overview**: Updated the README with a side-by-side overview showing both the Setup and Playing screens with pixelated headers.
