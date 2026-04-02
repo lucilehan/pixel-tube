@@ -141,7 +141,7 @@ const ROOMS = [
 // ── Curated 24/7 live streams ─────────────────────────────────────────────────
 const CURATED_LIVE: VideoItem[] = [
   // 🎧 Music
-  { id: "vYcDCcpue_k", title: "Nintendo Radio | 24/7 Music Live Stream", ch: "Nintendo Radio", dur: "LIVE", tags: "nintendo gaming music video game ost 24/7", room: "music" },
+  { id: "ZyAavTqsU6k", title: "Video Game Music Radio", ch: "Video Game Music Radio", dur: "LIVE", tags: "video game music gaming ost 24/7 chill", room: "music" },
   { id: "Dx5qFachd3A", title: "Jazz & Bossa Nova | Coffee Shop Radio", ch: "Cafe Music BGM", dur: "LIVE", tags: "jazz bossa nova coffee relax chill music", room: "music" },
   { id: "jfKfPfyJRdk", title: "lofi hip hop radio | beats to relax/study to", ch: "Lofi Girl", dur: "LIVE", tags: "lofi dark academia chill relax study beats", room: "music" },
   { id: "S-TNDpQGTSQ", title: "K-POP 24/7 Live Stream", ch: "K-POP Radio", dur: "LIVE", tags: "kpop k-pop korean pop music 24/7", room: "music" },
@@ -539,7 +539,7 @@ function getWebviewContent(
   .results-label { font-size:6px; color:#70707b; opacity:0.8; letter-spacing:1px; font-family:'Press Start 2P',monospace; text-shadow: 0 1px 0 #000; }
   .results-count { font-family:'VT323',monospace; font-size:14px; color:#70707b; line-height:1; }
 
-  .results-list { background:none; flex:1; min-height:132px; overflow-y:auto; padding:24px 0 0; display:flex; flex-direction:column; gap:4px; }
+  .results-list { background:none; flex:1; min-height:132px; overflow-y:auto; overflow-x:hidden; padding:24px 0 0; display:flex; flex-direction:column; gap:4px; }
   .results-list::-webkit-scrollbar { width:3px; }
   .results-list::-webkit-scrollbar-track { background:#030506; }
   .results-list::-webkit-scrollbar-thumb { background:#2a2a1a; }
@@ -577,7 +577,7 @@ function getWebviewContent(
   .setup-title-wrap { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:16px; padding-top:8px; }
   .setup-title { font-family:'Press Start 2P',monospace; font-size:7.5px; letter-spacing:2px; color:var(--brand-text); background:var(--brand-bg); border:2px solid var(--brand-bd); padding:3px 6px; text-shadow:0 1px 0 #000; display:inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); }
   .setup-subtitle { font-family:'Press Start 2P',monospace; font-size:6px; color:#b06a2a; opacity:0.6; text-shadow: 0 1px 0 #000; letter-spacing:1px; margin-top:24px; margin-bottom:10px; display:block; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .setup-channels { display:flex; flex-direction:column; gap:4px; padding:0; overflow-y:auto; flex:1; }
+  .setup-channels { display:flex; flex-direction:column; gap:4px; padding:0; overflow-y:auto; overflow-x:hidden; flex:1; }
   .setup-checkbox-lbl { display:flex; align-items:center; gap:12px; cursor:pointer; padding:6px 8px; background:var(--wood-5); border:1px solid var(--wood-edge); transition: var(--trans-mech); margin-left:0; }
   .setup-checkbox-lbl:hover { border-color:var(--col-purple); background:var(--wood-4); transform: translateX(2px); }
   .setup-checkbox-lbl.active { background:var(--wood-5); border-color:var(--wood-edge); }

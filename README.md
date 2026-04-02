@@ -73,7 +73,7 @@ Four environments, each with curated 24/7 streams:
 
 | Channel | What's on |
 |---------|-----------|
-| 🎧 Music | Lofi, jazz, Retro Gaming Radio, K-POP — perfect focus beats |
+| 🎧 Music | Lofi, jazz, Video Game Music Radio, K-POP — perfect focus beats |
 | 📰 News | Global coverage and financial updates |
 | 🎬 Entertainment | Films, compilations, city cams and more |
 | 🌿 Touch Grass | Nature, wildlife, and the outdoors |
@@ -120,6 +120,10 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 ---
 
 ## Changelog
+
+### 1.2.6
+- **Channel Update**: Replaced unavailable Nintendo Radio stream with Video Game Music Radio in the Music channel
+- **UI Polish**: Removed horizontal scrollbar that appeared on hover in the curated channel list and song list panels
 
 ### 1.2.4
 - **Security & Compliance**: Standardized asset metadata and genericized trademarked names to pass VS Code Marketplace security scans.
